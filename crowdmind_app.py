@@ -7,23 +7,26 @@ from PIL import Image
 import tempfile
 import os
 from crowdmind_model import RGB512Autoencoder
-model = RGB512Autoencoder().to(device)
-model.load_state_dict(torch.load("crowdmind_model.pth", map_location=device))
-model.eval()
 
-
+# Device setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Load model
 model = RGB512Autoencoder().to(device)
-import os
 if os.path.exists("crowdmind_model.pth"):
-    model.load_state_dict(torch.load("crowdmind_model.pth", map_location=device))
+    try:
+        model.load_state_dict(torch.load("crowdmind_model.pth", map_location=device))
+        model.eval()
+    except RuntimeError:
+        st.error("Model loading failed. Check if the .pth file matches the model architecture.")
+        st.stop()
 else:
     st.error("Model file not found. Please upload 'crowdmind_model.pth' to your repo.")
-model.eval()
+    st.stop()
 
 # Streamlit UI
 st.set_page_config(page_title="CrowdMind", layout="wide")
-st.title("🧠 CrowdMind: Crowd Behavior Anomaly Detection")
+st.title("CrowdMind: Crowd Behavior Analysis")
 
 uploaded_video = st.file_uploader("Upload a crowd video", type=["mp4", "avi"])
 FRAME_SIZE = (512, 512)
@@ -50,26 +53,26 @@ if uploaded_video:
     errors = []
     frames = []
 
-    st.info("🔍 Processing video for anomalies...")
-    with torch.no_grad():
-        idx = 0
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frames.append(frame)
-            input_tensor = preprocess_frame(frame)
-            recon = model(input_tensor).cpu()
-            error = compute_error(input_tensor.cpu(), recon)
-            errors.append(error)
-            idx += 1
-        cap.release()
+    with st.spinner("Processing video for anomalies..."):
+        with torch.no_grad():
+            idx = 0
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                frames.append(frame)
+                input_tensor = preprocess_frame(frame)
+                recon = model(input_tensor).cpu()
+                error = compute_error(input_tensor.cpu(), recon)
+                errors.append(error)
+                idx += 1
+            cap.release()
 
     threshold = np.percentile(errors, 95)
     anomalies = np.where(np.array(errors) > threshold)[0]
 
     # Error timeline
-    st.subheader("📈 Anomaly Score Timeline")
+    st.subheader("Anomaly Score Timeline")
     fig, ax = plt.subplots()
     ax.plot(errors, label="Reconstruction Error")
     ax.axhline(y=threshold, color='r', linestyle='--', label="Threshold")
@@ -79,7 +82,7 @@ if uploaded_video:
     st.pyplot(fig)
 
     # Top anomaly dashboard
-    st.subheader("🖼️ Top Anomalous Frames")
+    st.subheader("Top Anomalous Frames")
     top_idxs = np.argsort(errors)[-5:][::-1]
     cols = st.columns(len(top_idxs))
     for i, idx in enumerate(top_idxs):
@@ -90,7 +93,7 @@ if uploaded_video:
         cols[i].image(image, caption=f"Frame {idx}\nTime: {timestamp}\nError: {error_score:.4f}", use_column_width=True)
 
     # Generate anomaly video
-    st.subheader("🎥 Downloadable Anomaly Video")
+    st.subheader("Downloadable Anomaly Video")
     out_path = "CrowdMind_AnomalyVideo.mp4"
     out = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), FPS, FRAME_SIZE)
     cap = cv2.VideoCapture(temp_video.name)
@@ -112,7 +115,7 @@ if uploaded_video:
     out.release()
 
     with open(out_path, "rb") as f:
-        st.download_button("⬇️ Download Anomaly Video", f.read(), file_name="CrowdMind_AnomalyVideo.mp4")
+        st.download_button("Download Anomaly Video", f.read(), file_name="CrowdMind_AnomalyVideo.mp4")
 
     # Save dashboard image
     st.subheader("📸 Download Dashboard Image")
@@ -129,4 +132,4 @@ if uploaded_video:
     fig.savefig("CrowdMind_AnomalyDashboard.png")
 
     with open("CrowdMind_AnomalyDashboard.png", "rb") as f:
-        st.download_button("⬇️ Download Dashboard Image", f.read(), file_name="CrowdMind_AnomalyDashboard.png")
+        st.download_button("Download Dashboard Image", f.read(), file_name="CrowdMind_AnomalyDashboard.png")
