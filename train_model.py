@@ -1,36 +1,42 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset, DataLoader
+import cv2
+import os
+import numpy as np
 from crowdmind_model import RGB512Autoencoder
 
-# Replace with your own dataset loader
+# Folder with sample crowd images
+FRAME_DIR = "crowd_frames"
+
 class CrowdDataset(Dataset):
-    def __init__(self, frame_list):
-        self.frames = frame_list  # List of NumPy arrays (512x512x3)
+    def __init__(self, folder):
+        self.paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".jpg") or f.endswith(".png")]
 
     def __len__(self):
-        return len(self.frames)
+        return len(self.paths)
 
     def __getitem__(self, idx):
-        frame = self.frames[idx] / 255.0
-        tensor = torch.tensor(frame.transpose(2, 0, 1)).float()
+        img = cv2.imread(self.paths[idx])
+        img = cv2.resize(img, (512, 512))
+        img = img / 255.0
+        tensor = torch.tensor(img.transpose(2, 0, 1)).float()
         return tensor
 
-# Load your training frames
-train_frames = [...]  # Load normal frames here
-dataset = CrowdDataset(train_frames)
-loader = DataLoader(dataset, batch_size=8, shuffle=True)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dataset = CrowdDataset(FRAME_DIR)
+loader = DataLoader(dataset, batch_size=4, shuffle=True)
 
-model = RGB512Autoencoder().to("cuda" if torch.cuda.is_available() else "cpu")
+model = RGB512Autoencoder().to(device)
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 criterion = nn.MSELoss()
 
-for epoch in range(20):
+for epoch in range(5):  # Keep it short for dummy training
     model.train()
     total_loss = 0
     for batch in loader:
-        batch = batch.to("cuda" if torch.cuda.is_available() else "cpu")
+        batch = batch.to(device)
         output = model(batch)
         loss = criterion(output, batch)
         optimizer.zero_grad()
@@ -40,3 +46,4 @@ for epoch in range(20):
     print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
 
 torch.save(model.state_dict(), "crowdmind_model.pth")
+print("✅ Model saved as crowdmind_model.pth")
