@@ -6,30 +6,11 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import tempfile
 import os
+from crowdmind_model import RGB512Autoencoder
+model = RGB512Autoencoder().to(device)
+model.load_state_dict(torch.load("crowdmind_model.pth", map_location=device))
+model.eval()
 
-# Load your trained PyTorch autoencoder
-class RGB512Autoencoder(torch.nn.Module):
-    def __init__(self):
-        super(RGB512Autoencoder, self).__init__()
-        self.enc1 = torch.nn.Conv2d(3, 64, 3, padding=1)
-        self.enc2 = torch.nn.Conv2d(64, 32, 3, padding=1)
-        self.pool = torch.nn.MaxPool2d(2, 2)
-        self.dec1 = torch.nn.Conv2d(32, 32, 3, padding=1)
-        self.dec2 = torch.nn.Conv2d(32, 64, 3, padding=1)
-        self.dec3 = torch.nn.Conv2d(64, 3, 3, padding=1)
-        self.upsample = torch.nn.Upsample(scale_factor=2, mode='nearest')
-
-    def forward(self, x):
-        x = torch.relu(self.enc1(x))
-        x = self.pool(x)
-        x = torch.relu(self.enc2(x))
-        x = self.pool(x)
-        x = torch.relu(self.dec1(x))
-        x = self.upsample(x)
-        x = torch.relu(self.dec2(x))
-        x = self.upsample(x)
-        x = torch.sigmoid(self.dec3(x))
-        return x
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = RGB512Autoencoder().to(device)
