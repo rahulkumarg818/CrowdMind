@@ -38,6 +38,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+    
+
 # Branding Header
 st.markdown('<div class="glass">', unsafe_allow_html=True)
 st.markdown('<div class="title">CrowdMind</div>', unsafe_allow_html=True)
@@ -102,6 +104,17 @@ if uploaded_video:
     anomalies = np.where(np.array(errors) > threshold)[0]
 
     # Dashboard Layout
+    
+    # Top Anomalous Frames
+    st.subheader("Top Anomalous Frames")
+    top_idxs = np.argsort(errors)[-5:][::-1]
+    cols = st.columns(len(top_idxs))
+    for i, idx in enumerate(top_idxs):
+        frame = cv2.resize(frames[idx], FRAME_SIZE)
+        timestamp = frame_to_time(idx)
+        error_score = errors[idx]
+        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        cols[i].image(image, caption=f"Frame {idx}\nTime: {timestamp}\nError: {error_score:.4f}", use_column_width=True)
     col1, col2 = st.columns([2, 1])
     with col1:
         st.subheader("Anomaly Score Timeline")
@@ -116,17 +129,6 @@ if uploaded_video:
     with col2:
         st.metric("Frames Processed", len(errors))
         st.metric("Anomalies Detected", len(anomalies))
-
-    # Top Anomalous Frames
-    st.subheader("Top Anomalous Frames")
-    top_idxs = np.argsort(errors)[-5:][::-1]
-    cols = st.columns(len(top_idxs))
-    for i, idx in enumerate(top_idxs):
-        frame = cv2.resize(frames[idx], FRAME_SIZE)
-        timestamp = frame_to_time(idx)
-        error_score = errors[idx]
-        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        cols[i].image(image, caption=f"Frame {idx}\nTime: {timestamp}\nError: {error_score:.4f}", use_column_width=True)
 
     # Generate Anomaly Video
     st.subheader("Downloadable Anomaly Video")
