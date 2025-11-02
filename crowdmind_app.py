@@ -8,10 +8,43 @@ import tempfile
 import os
 from crowdmind_model import RGB512Autoencoder
 
-# Device setup
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Glassmorphism + Background Styling
+st.markdown("""
+    <style>
+    body {
+        background-image: url("https://images.unsplash.com/photo-1549924231-f129b911e442");
+        background-size: cover;
+        background-attachment: fixed;
+    }
+    .glass {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .title {
+        font-size: 40px;
+        font-weight: 700;
+        color: #00c6ff;
+        text-shadow: 1px 1px 2px #000;
+    }
+    .subtitle {
+        font-size: 20px;
+        color: #ffffff;
+        margin-bottom: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Load model
+# Branding Header
+st.markdown('<div class="glass">', unsafe_allow_html=True)
+st.markdown('<div class="title">CrowdMind</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Crowd Behavior Analysis</div>', unsafe_allow_html=True)
+
+# 🔧 Model Setup
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = RGB512Autoencoder().to(device)
 if os.path.exists("crowdmind_model.pth"):
     try:
@@ -24,11 +57,8 @@ else:
     st.error("Model file not found. Please upload 'crowdmind_model.pth' to your repo.")
     st.stop()
 
-# Streamlit UI
-st.set_page_config(page_title="CrowdMind", layout="wide")
-st.title("CrowdMind: Crowd Behavior Analysis")
-
-uploaded_video = st.file_uploader("Upload a crowd video", type=["mp4", "avi"])
+# Upload Video
+uploaded_video = st.file_uploader("🎥 Upload a crowd video", type=["mp4", "avi"])
 FRAME_SIZE = (512, 512)
 FPS = 20
 
@@ -53,7 +83,7 @@ if uploaded_video:
     errors = []
     frames = []
 
-    with st.spinner("Processing video for anomalies..."):
+    with st.spinner("Scanning crowd behavior..."):
         with torch.no_grad():
             idx = 0
             while cap.isOpened():
@@ -71,17 +101,23 @@ if uploaded_video:
     threshold = np.percentile(errors, 95)
     anomalies = np.where(np.array(errors) > threshold)[0]
 
-    # Error timeline
-    st.subheader("Anomaly Score Timeline")
-    fig, ax = plt.subplots()
-    ax.plot(errors, label="Reconstruction Error")
-    ax.axhline(y=threshold, color='r', linestyle='--', label="Threshold")
-    ax.set_xlabel("Frame Index")
-    ax.set_ylabel("Error")
-    ax.legend()
-    st.pyplot(fig)
+    # Dashboard Layout
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.subheader("Anomaly Score Timeline")
+        fig, ax = plt.subplots()
+        ax.plot(errors, label="Reconstruction Error")
+        ax.axhline(y=threshold, color='r', linestyle='--', label="Threshold")
+        ax.set_xlabel("Frame Index")
+        ax.set_ylabel("Error")
+        ax.legend()
+        st.pyplot(fig)
 
-    # Top anomaly dashboard
+    with col2:
+        st.metric("Frames Processed", len(errors))
+        st.metric("Anomalies Detected", len(anomalies))
+
+    # Top Anomalous Frames
     st.subheader("Top Anomalous Frames")
     top_idxs = np.argsort(errors)[-5:][::-1]
     cols = st.columns(len(top_idxs))
@@ -92,7 +128,7 @@ if uploaded_video:
         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         cols[i].image(image, caption=f"Frame {idx}\nTime: {timestamp}\nError: {error_score:.4f}", use_column_width=True)
 
-    # Generate anomaly video
+    # Generate Anomaly Video
     st.subheader("Downloadable Anomaly Video")
     out_path = "CrowdMind_AnomalyVideo.mp4"
     out = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), FPS, FRAME_SIZE)
@@ -117,8 +153,8 @@ if uploaded_video:
     with open(out_path, "rb") as f:
         st.download_button("Download Anomaly Video", f.read(), file_name="CrowdMind_AnomalyVideo.mp4")
 
-    # Save dashboard image
-    st.subheader("📸 Download Dashboard Image")
+    # Save Dashboard Image
+    st.subheader("Download Dashboard Image")
     fig, axs = plt.subplots(1, 5, figsize=(15, 4))
     fig.suptitle("CrowdMind – Top Anomalous Frames", fontsize=16)
     for i, idx in enumerate(top_idxs):
@@ -133,3 +169,9 @@ if uploaded_video:
 
     with open("CrowdMind_AnomalyDashboard.png", "rb") as f:
         st.download_button("Download Dashboard Image", f.read(), file_name="CrowdMind_AnomalyDashboard.png")
+
+# Footer Branding
+st.markdown("""
+    <hr>
+    <center><small>Made with ❤️ by Rahul Kumar | Powered by CrowdMind</small></center>
+""", unsafe_allow_html=True)
