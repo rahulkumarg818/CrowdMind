@@ -33,7 +33,11 @@ class RGB512Autoencoder(torch.nn.Module):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = RGB512Autoencoder().to(device)
-model.load_state_dict(torch.load("crowdmind_model.pth", map_location=device))
+import os
+if os.path.exists("crowdmind_model.pth"):
+    model.load_state_dict(torch.load("crowdmind_model.pth", map_location=device))
+else:
+    st.error("Model file not found. Please upload 'crowdmind_model.pth' to your repo.")
 model.eval()
 
 # Streamlit UI
