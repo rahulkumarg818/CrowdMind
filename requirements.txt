@@ -3,9 +3,5 @@ torch
 torchvision
 opencv-python
 matplotlib
-<<<<<<< HEAD
 Pillow
 opencv-python-headless
-=======
-Pillow
->>>>>>> 796efb0 (all)
