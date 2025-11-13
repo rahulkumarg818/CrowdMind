@@ -172,8 +172,4 @@ if uploaded_video:
     with open("CrowdMind_AnomalyDashboard.png", "rb") as f:
         st.download_button("Download Dashboard Image", f.read(), file_name="CrowdMind_AnomalyDashboard.png")
 
-# Footer Branding
-st.markdown("""
-    <hr>
-    <center><small>Made with ❤️ by Rahul Kumar | Powered by CrowdMind</small></center>
-""", unsafe_allow_html=True)
+
